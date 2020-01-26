@@ -1166,8 +1166,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=1002" NodeId="ns=1;i=6011" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=1002" NodeId="ns=1;i=6011" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1002</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1246,8 +1246,8 @@
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5002" NodeId="ns=1;i=6034" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5002" NodeId="ns=1;i=6034" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5002</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1286,16 +1286,16 @@
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5002</Reference>
         </References>
     </UAVariable>
-    <UAVariable SymbolicName="ae_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=6030" BrowseName="1:ae-ID" AccessLevel="3">
-        <DisplayName>ae-ID</DisplayName>
+    <UAVariable SymbolicName="ae_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=6030" BrowseName="1:AE-ID" AccessLevel="3">
+        <DisplayName>AE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1007</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable SymbolicName="app_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=6031" BrowseName="1:app-ID" AccessLevel="3">
-        <DisplayName>app-ID</DisplayName>
+    <UAVariable SymbolicName="app_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=6031" BrowseName="1:App-ID" AccessLevel="3">
+        <DisplayName>App-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1007</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1350,8 +1350,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5001" NodeId="ns=1;i=6021" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5001" NodeId="ns=1;i=6021" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5001</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1448,16 +1448,16 @@
             <Reference ReferenceType="HasProperty">ns=1;i=6046</Reference>
         </References>
     </UAObject>
-    <UAVariable SymbolicName="ae_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6039" BrowseName="1:ae-ID" AccessLevel="3">
-        <DisplayName>ae-ID</DisplayName>
+    <UAVariable SymbolicName="ae_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6039" BrowseName="1:AE-ID" AccessLevel="3">
+        <DisplayName>AE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5003</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable SymbolicName="app_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6040" BrowseName="1:app-ID" AccessLevel="3">
-        <DisplayName>app-ID</DisplayName>
+    <UAVariable SymbolicName="app_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6040" BrowseName="1:App-ID" AccessLevel="3">
+        <DisplayName>App-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5003</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1472,8 +1472,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6042" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6042" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5003</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1512,8 +1512,8 @@
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5003</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="LocalizedText" ParentNodeId="ns=1;i=1003" NodeId="ns=1;i=6013" BrowseName="1:cseID" AccessLevel="3">
-        <DisplayName>cseID</DisplayName>
+    <UAVariable DataType="LocalizedText" ParentNodeId="ns=1;i=1003" NodeId="ns=1;i=6013" BrowseName="1:CSE-ID" AccessLevel="3">
+        <DisplayName>CSE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1003</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1562,8 +1562,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable SymbolicName="cse_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5005" NodeId="ns=1;i=6057" BrowseName="1:cse-ID" AccessLevel="3">
-        <DisplayName>cse-ID</DisplayName>
+    <UAVariable SymbolicName="cse_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5005" NodeId="ns=1;i=6057" BrowseName="1:CSE-ID" AccessLevel="3">
+        <DisplayName>CSE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5005</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1594,8 +1594,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="LocalizedText" ParentNodeId="ns=1;i=5007" NodeId="ns=1;i=6059" BrowseName="1:cseID" AccessLevel="3">
-        <DisplayName>cseID</DisplayName>
+    <UAVariable DataType="LocalizedText" ParentNodeId="ns=1;i=5007" NodeId="ns=1;i=6059" BrowseName="1:CSE-ID" AccessLevel="3">
+        <DisplayName>CSE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5007</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1610,8 +1610,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5007" NodeId="ns=1;i=6061" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5007" NodeId="ns=1;i=6061" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5007</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1658,8 +1658,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5005" NodeId="ns=1;i=6068" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5005" NodeId="ns=1;i=6068" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5005</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1749,8 +1749,8 @@
             <Reference ReferenceType="HasSubtype" IsForward="false">ns=1;i=1002</Reference>
         </References>
     </UAObjectType>
-    <UAVariable SymbolicName="cse_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1008" NodeId="ns=1;i=6047" BrowseName="1:cse-ID" AccessLevel="3">
-        <DisplayName>cse-ID</DisplayName>
+    <UAVariable SymbolicName="cse_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1008" NodeId="ns=1;i=6047" BrowseName="1:CSE-ID" AccessLevel="3">
+        <DisplayName>CSE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1008</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1781,8 +1781,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="LocalizedText" ParentNodeId="ns=1;i=5006" NodeId="ns=1;i=6049" BrowseName="1:cseID" AccessLevel="3">
-        <DisplayName>cseID</DisplayName>
+    <UAVariable DataType="LocalizedText" ParentNodeId="ns=1;i=5006" NodeId="ns=1;i=6049" BrowseName="1:CSE-ID" AccessLevel="3">
+        <DisplayName>CSE-ID</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5006</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1797,8 +1797,8 @@
             <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
         </References>
     </UAVariable>
-    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5006" NodeId="ns=1;i=6052" BrowseName="1:lastModifiedItem" AccessLevel="3">
-        <DisplayName>lastModifiedItem</DisplayName>
+    <UAVariable DataType="DateTime" ParentNodeId="ns=1;i=5006" NodeId="ns=1;i=6052" BrowseName="1:lastModifiedTime" AccessLevel="3">
+        <DisplayName>lastModifiedTime</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5006</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
