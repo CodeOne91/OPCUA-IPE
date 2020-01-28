@@ -9,6 +9,7 @@
    "cseType": "cseType",
    "AE-ID": "AE_ID",
    "App-ID": "App_ID",
+   "appName": "appName",
    "currentNrOfInstances": "currentNrOfInstances",
    "content": "content",
    "contentSize": "contentSize"

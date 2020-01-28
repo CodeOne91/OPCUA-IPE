@@ -20,6 +20,7 @@ from opcua.server.subscription_service import SubscriptionService
 from opcua.server.user_manager import UserManager
 import os
 from threading import Lock
+from opcua.ua.uatypes import DataValue
 
 
 try:
@@ -361,9 +362,8 @@ class CustomInternalSession(InternalSession):
         return result
 
     def read(self, params):
-        #print(params.NodesToRead[0].NodeId.NamespaceIndex)
-        #if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
-          #  self.get_data_request(params.NodesToRead[0].NodeId)
+        if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
+            self.get_data_request(params.NodesToRead[0].NodeId, "sad")
         results = self.iserver.attribute_service.read(params)
         return results
 
@@ -371,6 +371,10 @@ class CustomInternalSession(InternalSession):
         return self.iserver.history_manager.read_history(params)
 
     def write(self, params):
+        if params.NodesToWrite[0].NodeId.NamespaceIndex == 2:
+            print("WRITE")
+            self.write_data_request(params.NodesToWrite[0].NodeId, 
+                                    params.NodesToWrite[0].Value.Value._value)
         return self.iserver.attribute_service.write(params, self.user)
 
     def browse(self, params):
@@ -438,7 +442,10 @@ class CustomInternalSession(InternalSession):
         if acks is None:
             acks = []
         return self.subscription_service.publish(acks)
-    #custom
-    def get_data_request(self, node_to_read):
-        self.iserver.interworking_manager.translate_request(node_to_read)
-        
+    #custom method
+    def get_data_request(self, node_to_read, old_value):
+        old_value = self.iserver.aspace.get_attribute_value(node_to_read, ua.AttributeIds.Value).Value.Value
+        self.iserver.interworking_manager.translate_read_request(node_to_read, old_value)
+    #custom write method
+    def write_data_request(self, node_to_write, val):
+        self.iserver.interworking_manager.translate_write_request(node_to_write, val)   

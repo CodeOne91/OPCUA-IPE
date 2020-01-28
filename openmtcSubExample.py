@@ -167,7 +167,7 @@ if __name__ == '__main__':
 
     host = 'http://localhost:8000'
     app = TestIPE(
-        poas=['http://localhost:21346']         # adds poas in order to receive notifications
+        poas=['http://localhost:21346'],          # adds poas in order to receive notifications
         
     )
     Runner(app).run(host)

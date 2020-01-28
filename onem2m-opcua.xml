@@ -1213,6 +1213,8 @@
             <Reference ReferenceType="HasProperty">ns=1;i=6030</Reference>
             <Reference ReferenceType="HasSubtype" IsForward="false">ns=1;i=1002</Reference>
             <Reference ReferenceType="HasProperty">ns=1;i=6031</Reference>
+            <Reference ReferenceType="HasProperty">ns=1;i=6073</Reference>
+            
         </References>
     </UAObjectType>
     <UAObject SymbolicName="container" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=5002" BrowseName="1:&lt;container>">
@@ -1288,6 +1290,14 @@
     </UAVariable>
     <UAVariable SymbolicName="ae_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=6030" BrowseName="1:AE-ID" AccessLevel="3">
         <DisplayName>AE-ID</DisplayName>
+        <References>
+            <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1007</Reference>
+            <Reference ReferenceType="HasModellingRule">i=78</Reference>
+            <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+        </References>
+    </UAVariable>
+    <UAVariable SymbolicName="appName" DataType="LocalizedText" ParentNodeId="ns=1;i=1007" NodeId="ns=1;i=6073" BrowseName="1:appName" AccessLevel="3" UserAccessLevel="3">
+        <DisplayName>appName</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=1007</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>
@@ -1446,10 +1456,19 @@
             <Reference ReferenceType="HasProperty">ns=1;i=6044</Reference>
             <Reference ReferenceType="HasProperty">ns=1;i=6045</Reference>
             <Reference ReferenceType="HasProperty">ns=1;i=6046</Reference>
+            <Reference ReferenceType="HasProperty">ns=1;i=6074</Reference>
         </References>
     </UAObject>
     <UAVariable SymbolicName="ae_ID" DataType="LocalizedText" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6039" BrowseName="1:AE-ID" AccessLevel="3">
         <DisplayName>AE-ID</DisplayName>
+        <References>
+            <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5003</Reference>
+            <Reference ReferenceType="HasModellingRule">i=78</Reference>
+            <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+        </References>
+    </UAVariable>
+    <UAVariable SymbolicName="appName" DataType="LocalizedText" ParentNodeId="ns=1;i=5003" NodeId="ns=1;i=6074" BrowseName="1:appName" AccessLevel="3" UserAccessLevel="3">
+        <DisplayName>appName</DisplayName>
         <References>
             <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=5003</Reference>
             <Reference ReferenceType="HasModellingRule">i=78</Reference>

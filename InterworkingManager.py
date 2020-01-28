@@ -8,6 +8,7 @@ from openmtc_onem2m.transport import OneM2MRequest
 import json
 from threading import Thread
 import time
+from test.support import resource
 class InterworkingManager(Thread):
     
     
@@ -68,12 +69,13 @@ class InterworkingManager(Thread):
                 child.set_value(resource.AE_ID)
             elif child.get_browse_name().to_string() == "2:App-ID":
                 child.set_value(resource.App_ID)                            
+            elif child.get_browse_name().to_string() == "2:appName":
+                print("DENTRO : "+resource.appName)
+                child.set_value(resource.appName)                            
         self.resource_node_builder(aeNode, resource)
         self.populate_dict(aeNode, resource)
-
+        
         return aeNode
-    
-    #da migliorare   
     
     def container_node_builder(self,aeNodesList, containerNodesList, resource):
         idx = server.get_namespace_index("http://dieei.unict.it/oneM2M-OPCUA/")
@@ -84,10 +86,9 @@ class InterworkingManager(Thread):
                 containerNodeAdded = aeNode.add_object(idx,resource.resourceName, containerObjectType)
                 listChildren = containerNodeAdded.get_children()
         for containerNode in containerNodesList:
-            print(containerNode)
             if resource.parentID == containerNode.get_child("2:resourceID").get_value():
                 containerNodeAdded = containerNode.add_object(idx,resource.resourceName, containerObjectType)
-                print("CNT:" + str(containerNode.get_child("2:resourceID").get_value())+ "  ADD AS CHILD: "+ resource.resourceName)
+                #print("CNT:" + str(containerNode.get_child("2:resourceID").get_value())+ "  ADD AS CHILD: "+ resource.resourceName)
                 listChildren = containerNodeAdded.get_children()
         
         for child in listChildren:
@@ -107,7 +108,7 @@ class InterworkingManager(Thread):
         for containerNode in containerNodesList:
             if resource.parentID == containerNode.get_child("2:resourceID").get_value():
                 contentInstanceNode = containerNode.add_object(idx,resource.resourceName, contentInstanceObjectType)
-                print("CNT for Inst:" + str(containerNode.get_child("2:resourceID").get_value())+ "  ADD AS CHILD: "+ resource.resourceName)
+                #print("CNT for Inst:" + str(containerNode.get_child("2:resourceID").get_value())+ "  ADD AS CHILD: "+ resource.resourceName)
 
                 listChildren = contentInstanceNode.get_children()
                 for child in listChildren:
@@ -153,20 +154,40 @@ class InterworkingManager(Thread):
                 self.content_instance_node_builder(self.containerNodes,resource)
                 
     
-    def translate_request(self,node_to_read):
+    def translate_read_request(self,node_to_read, old_value):
             if self.nodeid_uri_dict.get(node_to_read, None) is not None:
                 onem2m_request = OneM2MRequest("retrieve", to=self.nodeid_uri_dict.get(node_to_read))
                 promise = self.xae.client.send_onem2m_request(onem2m_request)
                 onem2m_response = promise.get()
                 response = onem2m_response.content
                 attr_to_read = self.opc_openmtc_attrname_dict[self.nodeid_attr_dict[node_to_read]]
-                server.set_attribute_value(node_to_read, getattr(response,attr_to_read))
                 
-                datavalue =self.decode_response(attr_to_read, getattr(response,attr_to_read))
-                print(" Read_Value: "+ str(datavalue))
+                new_value =self.decode_response(attr_to_read, getattr(response,attr_to_read))
+                print(" Read_Value: "+ str(new_value))
+                if old_value != new_value:
+                    server.get_node(node_to_read).set_value(new_value)
                 
-                server.get_node(node_to_read).set_value(datavalue)
                 
+    def translate_write_request(self,node_to_write,value_to_write):
+            if self.nodeid_uri_dict.get(node_to_write, None) is not None:
+                #take uri from nodeid
+                resource_uri = self.nodeid_uri_dict.get(node_to_write)
+                #take resource from uri
+                res = self.xae.uri_resource_dict.get(resource_uri)
+                #take attr from node id
+                attr_to_write = self.nodeid_attr_dict.get(node_to_write)
+                #print("URI:"+ resource_uri + "  RESOURCE: "+ str(res))
+                #print("ATTR:"+ attr_to_write+ "  VAL:"+value_to_write )
+                
+                update_instance = self.decode_request(res, 
+                                                      attr_to_write, value_to_write)
+                onem2m_request = OneM2MRequest("update",
+                                                to=self.nodeid_uri_dict.get(node_to_write),
+                                                pc=update_instance)
+                self.xae.client.send_onem2m_request(onem2m_request)
+       
+                
+                   
     def parse_json(self):
         f = open('opc_openmtc_name_map.json')
         data = json.load(f)
@@ -179,8 +200,25 @@ class InterworkingManager(Thread):
         if attr_to_read == "cseType":
             return datavalue-1
         return datavalue
-            
-
+    
+    def decode_request(self, resource,attr_to_write , value_to_write):
+        if isinstance(resource, CSEBase):
+            cse = CSEBase()
+            setattr(cse, attr_to_write, value_to_write)
+            return cse
+        elif isinstance(resource, AE):
+            ae = AE()
+            setattr(ae, attr_to_write, value_to_write)
+            return ae
+        elif isinstance(resource, Container):
+            cnt = Container()
+            setattr(cnt, attr_to_write, value_to_write)
+            return cnt
+        elif isinstance(resource, ContentInstance):
+            cin = ContentInstance()
+            setattr(cin, attr_to_write, value_to_write)
+            return cin
+        return resource
 
 #write (can update attributes only)
 #https://fiware-openmtc.readthedocs.io/en/latest/sdk-client/index.html 
@@ -192,10 +230,10 @@ ipe_ae_thread = Thread(target= ipe.connect_to_local)
 ipe_ae_thread.start()
 
 #need to initialize ipe_ae, can be used thread-lock
-time.sleep(7)
+time.sleep(5)
 ipe.retrieveRequest()
 print("RESOURCE DISCOVERED FROM IPE-AE:")
-print(ipe.resourceDiscovered)
+print(ipe.uri_resource_dict.keys())
 in_manager = InterworkingManager(ipe)
 server = in_manager.init_server()
 in_manager.map_resource_to_node(server)
