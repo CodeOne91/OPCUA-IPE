@@ -1,17 +1,11 @@
 from copy import copy
-from datetime import datetime, timedelta
+from datetime import  timedelta
 from enum import Enum
-import logging
 from opcua import ua
 from opcua.common import utils
-from opcua.common.callback import (CallbackType, ServerItemCallback,
-                                   CallbackDispatcher)
+from opcua.common.callback import CallbackType, ServerItemCallback, CallbackDispatcher
 from opcua.common.node import Node
-from opcua.server.address_space import AddressSpace
-from opcua.server.address_space import AttributeService
-from opcua.server.address_space import MethodService
-from opcua.server.address_space import NodeManagementService
-from opcua.server.address_space import ViewService
+from opcua.server.address_space import AddressSpace, AttributeService, MethodService, NodeManagementService, ViewService
 from opcua.server.discovery_service import LocalDiscoveryService
 from opcua.server.history import HistoryManager
 from opcua.server.internal_server import InternalSession, InternalServer
@@ -19,25 +13,15 @@ from opcua.server.standard_address_space import standard_address_space
 from opcua.server.subscription_service import SubscriptionService
 from opcua.server.user_manager import UserManager
 import os
+import time
 from threading import Lock
-from opcua.ua.uatypes import DataValue
-
-
+from StoppableThread import StoppableThread 
 try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
-
-from threading import RLock
 import logging
 from datetime import datetime
-import collections
-import shelve
-try:
-    import cPickle as pickle
-except:
-    import pickle
-
 
 
 
@@ -313,6 +297,7 @@ class CustomInternalSession(InternalSession):
         self.subscriptions = []
         self.logger.info("Created internal session %s", self.name)
         self._lock = Lock()
+        self.m_item_id_thread_dict = {}
 
     @property
     def user_manager(self):
@@ -363,7 +348,7 @@ class CustomInternalSession(InternalSession):
 
     def read(self, params):
         if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
-            self.get_data_request(params.NodesToRead[0].NodeId, "sad")
+            self.get_data_request(params.NodesToRead[0].NodeId)
         results = self.iserver.attribute_service.read(params)
         return results
 
@@ -411,9 +396,20 @@ class CustomInternalSession(InternalSession):
         return self.subscription_service.modify_subscription(params, callback)
 
     def create_monitored_items(self, params):
+        
+      
         subscription_result = self.subscription_service.create_monitored_items(params)
         self.iserver.server_callback_dispatcher.dispatch(
             CallbackType.ItemSubscriptionCreated, ServerItemCallback(params, subscription_result))
+        if params.ItemsToCreate[0].ItemToMonitor.NodeId.NamespaceIndex == 2 and subscription_result[0].StatusCode.is_good():
+            node_to_read = params.ItemsToCreate[0].ItemToMonitor.NodeId
+            frequency = subscription_result[0].RevisedSamplingInterval
+            monitored_ited_id = subscription_result[0].MonitoredItemId
+
+            #monitor_thread = threading.Thread(target=self.read_periodically,args=[node_to_read, frequency])
+            monitor_thread = StoppableThread(target=self.read_periodically,args=[node_to_read, frequency])
+            self.m_item_id_thread_dict[monitored_ited_id] = monitor_thread
+            monitor_thread.start()
         return subscription_result
 
     def modify_monitored_items(self, params):
@@ -436,6 +432,8 @@ class CustomInternalSession(InternalSession):
         subscription_result = self.subscription_service.delete_monitored_items(params)
         self.iserver.server_callback_dispatcher.dispatch(
             CallbackType.ItemSubscriptionDeleted, ServerItemCallback(params, subscription_result))
+        self.m_item_id_thread_dict.get(params.MonitoredItemIds[0]).stop()
+        
         return subscription_result
 
     def publish(self, acks=None):
@@ -443,9 +441,19 @@ class CustomInternalSession(InternalSession):
             acks = []
         return self.subscription_service.publish(acks)
     #custom method
-    def get_data_request(self, node_to_read, old_value):
+    def get_data_request(self, node_to_read):
         old_value = self.iserver.aspace.get_attribute_value(node_to_read, ua.AttributeIds.Value).Value.Value
         self.iserver.interworking_manager.translate_read_request(node_to_read, old_value)
     #custom write method
     def write_data_request(self, node_to_write, val):
-        self.iserver.interworking_manager.translate_write_request(node_to_write, val)   
+        self.iserver.interworking_manager.translate_write_request(node_to_write, val)
+        
+        
+    def read_periodically(self,node_to_read, frequency):
+        print(self.m_item_id_thread_dict)
+        self.get_data_request(node_to_read)
+        time.sleep(frequency/1000)
+        print("thread  "+ str(frequency))
+        #t2 =threading.Timer(0.5, self.get_data_request, args=[node_to_read])
+        #t2.start()
+        #t2.join()

@@ -9,8 +9,8 @@ import json
 from threading import Thread
 import time
 from test.support import resource
+
 class InterworkingManager(Thread):
-    
     
     def __init__(self, xae):
         self.xae = xae
@@ -60,7 +60,6 @@ class InterworkingManager(Thread):
     def ae_node_builder(self,myobj, resource):
         idx = server.get_namespace_index("http://dieei.unict.it/oneM2M-OPCUA/")
         aeObjectType = ua.NodeId.from_string('ns=%d;i=1007' % idx)
-        
         aeNode = myobj.add_object(idx,resource.resourceName, aeObjectType)
         listChildren = aeNode.get_children()
         for child in listChildren:
@@ -70,11 +69,9 @@ class InterworkingManager(Thread):
             elif child.get_browse_name().to_string() == "2:App-ID":
                 child.set_value(resource.App_ID)                            
             elif child.get_browse_name().to_string() == "2:appName":
-                print("DENTRO : "+resource.appName)
                 child.set_value(resource.appName)                            
         self.resource_node_builder(aeNode, resource)
         self.populate_dict(aeNode, resource)
-        
         return aeNode
     
     def container_node_builder(self,aeNodesList, containerNodesList, resource):
@@ -88,7 +85,6 @@ class InterworkingManager(Thread):
         for containerNode in containerNodesList:
             if resource.parentID == containerNode.get_child("2:resourceID").get_value():
                 containerNodeAdded = containerNode.add_object(idx,resource.resourceName, containerObjectType)
-                #print("CNT:" + str(containerNode.get_child("2:resourceID").get_value())+ "  ADD AS CHILD: "+ resource.resourceName)
                 listChildren = containerNodeAdded.get_children()
         
         for child in listChildren:
@@ -108,8 +104,6 @@ class InterworkingManager(Thread):
         for containerNode in containerNodesList:
             if resource.parentID == containerNode.get_child("2:resourceID").get_value():
                 contentInstanceNode = containerNode.add_object(idx,resource.resourceName, contentInstanceObjectType)
-                #print("CNT for Inst:" + str(containerNode.get_child("2:resourceID").get_value())+ "  ADD AS CHILD: "+ resource.resourceName)
-
                 listChildren = contentInstanceNode.get_children()
                 for child in listChildren:
                     self.populate_dict_name(child)                    
@@ -121,7 +115,6 @@ class InterworkingManager(Thread):
                 self.populate_dict(contentInstanceNode, resource)
                
     def populate_dict(self, myobj, resource):
-        
         listChildren = myobj.get_children()
         for child in listChildren:
             self.nodeid_uri_dict[child.nodeid] = self.xae.find_uri(resource)
@@ -129,9 +122,6 @@ class InterworkingManager(Thread):
     def populate_dict_name(self, child):
         self.nodeid_attr_dict[child.nodeid] = (child.get_browse_name().to_string())[2:]
 
-        
-#    def get_resource_uri(self, node):
-#        if node.get_child("2:parentID") is not None:
             
     def init_server(self):
         custom_iserver = CustomInternalServer(self)
@@ -163,7 +153,7 @@ class InterworkingManager(Thread):
                 attr_to_read = self.opc_openmtc_attrname_dict[self.nodeid_attr_dict[node_to_read]]
                 
                 new_value =self.decode_response(attr_to_read, getattr(response,attr_to_read))
-                print(" Read_Value: "+ str(new_value))
+                print(" HTTP-Read_Value: "+ str(new_value))
                 if old_value != new_value:
                     server.get_node(node_to_read).set_value(new_value)
                 
@@ -176,8 +166,6 @@ class InterworkingManager(Thread):
                 res = self.xae.uri_resource_dict.get(resource_uri)
                 #take attr from node id
                 attr_to_write = self.nodeid_attr_dict.get(node_to_write)
-                #print("URI:"+ resource_uri + "  RESOURCE: "+ str(res))
-                #print("ATTR:"+ attr_to_write+ "  VAL:"+value_to_write )
                 
                 update_instance = self.decode_request(res, 
                                                       attr_to_write, value_to_write)
@@ -220,15 +208,10 @@ class InterworkingManager(Thread):
             return cin
         return resource
 
-#write (can update attributes only)
-#https://fiware-openmtc.readthedocs.io/en/latest/sdk-client/index.html 
 
-
-ipe = IpeAe("ipe_ae", ['http://localhost:21346'])
+ipe = IpeAe("ipe_ae", ['http://0.0.0.0:21346'])
 ipe_ae_thread = Thread(target= ipe.connect_to_local)
-
 ipe_ae_thread.start()
-
 #need to initialize ipe_ae, can be used thread-lock
 time.sleep(5)
 ipe.retrieveRequest()

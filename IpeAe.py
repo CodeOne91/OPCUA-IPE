@@ -5,20 +5,12 @@ from openmtc_onem2m.client.http import OneM2MHTTPClient
 from openmtc_onem2m.model import AE,  CSEBase, Container, ContentInstance,ResourceTypeE 
 from random import random
 
-#subscription net 1 regard update to all attr of subscribed resource
-
-
 
 class IpeAe(XAE):
     
     def __init__(self, name_ae, poas):
-        XAE.__init__(self,name=name_ae,poas=poas,)
+        XAE.__init__(self,name=name_ae,poas=poas)
         self.max_nr_of_instances=0
-        #self.lock = threading.Lock()
-        #self.lock.acquire()
-        
-
-        
     remove_registration = True
 
     # sensors to create
@@ -41,7 +33,7 @@ class IpeAe(XAE):
 
     resourceDiscovered = []
     uri_resource_dict = {}
-    client = OneM2MHTTPClient("http://localhost:8000",False)
+    client = OneM2MHTTPClient("http://0.0.0.0:8000",False)
     
     
     
@@ -50,24 +42,14 @@ class IpeAe(XAE):
         
         self.example_init()
 
-      
-        # trigger periodically new data generation
-        #self.run_forever(3, self.get_random_data)
-        self.get_random_data()
-        self.get_random_data()
-        self.get_random_data()
-        self.get_random_data()
-        self.get_random_data()
+        self.run_forever(10, self.get_random_data)
         
-        # log message
         self.logger.debug('registered')
-                #exit()
         
     def retrieveRequest(self):
         app = AE(appName = "appName")
         onem2m_request = OneM2MRequest("update", to="onem2m/ipe_ae", pc=app)
         promise = self.client.send_onem2m_request(onem2m_request)
-            
         content_request = self.discover()
         for resource in content_request:
             onem2m_request = OneM2MRequest("retrieve", to=resource)
@@ -77,7 +59,7 @@ class IpeAe(XAE):
             
             self.resourceDiscovered.append(self.resourceRetrievedBuilder(response))
             self.uri_resource_dict[resource] = self.resourceRetrievedBuilder(response)
-        # to remove None values in list 
+        # remove None values in list 
         self.resourceDiscovered = [i for i in self.resourceDiscovered if i]
     
     def resourceRetrievedBuilder(self, response):
@@ -155,9 +137,7 @@ class IpeAe(XAE):
         print("")
         print("")
     
-    
     def find_uri(self,resource):
-        #la via del pitone
         return next((k for k, v in self.uri_resource_dict.items() if v is not None and  v.resourceID == resource.resourceID), None)
     
     def connect_to_local(self):
@@ -171,13 +151,6 @@ class IpeAe(XAE):
             print('value: %s' % value)
             print('')
             
-    def handle_command_2(self, sub, net, rep):
-        print('handle_command_general...')
-        print('subscription path: %s' % sub)
-        print('notification event type: %s' % net)
-        print('representation: %s' % rep)
-        print('')
-
     def get_random_data(self):
 
         # at random time intervals
@@ -199,20 +172,16 @@ class IpeAe(XAE):
             self.handle_sensor_data(sensor, value)
 
     def handle_sensor_data(self, sensor, value):
-
-        # initialize sensor structure if never done before
         if sensor not in self._recognized_sensors:
             self.create_sensor_structure(sensor)
         self.push_sensor_data(sensor, value)
 
     
     def example_init(self):
-                # init variables
         self._recognized_sensors = {}
         self._recognized_measurement_containers = {}
         self._command_containers = {}
 
-        # init base structure
         label = 'devices'
         container = Container(resourceName=label)
         self._devices_container = self.create_container(None,
@@ -244,11 +213,9 @@ class IpeAe(XAE):
                 commands_container.path,    # the Container or it's path to be subscribed
                 self.handle_command         # reference of the notification handling function
             )
-            
-    
+
     def create_sensor_structure(self, sensor):
         print('initializing sensor: %s' % sensor)
-
         # create sensor container
         device_container = Container(resourceName=sensor)
         device_container = self.create_container(self._devices_container.path,
@@ -275,7 +242,6 @@ class IpeAe(XAE):
         self._recognized_measurement_containers[sensor] = measurements_container
 
     def push_sensor_data(self, sensor, value):
-
         # build data set with value and metadata
         if sensor.startswith('Temp'):
             data = {
