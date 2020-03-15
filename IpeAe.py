@@ -2,17 +2,139 @@ from openmtc_app.flask_runner import FlaskRunner
 from openmtc_app.onem2m import XAE
 from openmtc_onem2m import OneM2MRequest
 from openmtc_onem2m.client.http import OneM2MHTTPClient
-from openmtc_onem2m.model import AE,  CSEBase, Container, ContentInstance,ResourceTypeE 
+from openmtc_onem2m.model import AE,Container, ResourceTypeE 
 from random import random
-
+from ResourceBuilder import ResourceBuilder
 
 class IpeAe(XAE):
+    interworking_manager = []
+    resourceDiscovered = []
+    container_discovered = []
+    uri_resource_dict = {}
+    exposed_ids = []
+    client = OneM2MHTTPClient("http://0.0.0.0:8000",False)
     
     def __init__(self, name_ae, poas):
         XAE.__init__(self,name=name_ae,poas=poas)
         self.max_nr_of_instances=0
-    remove_registration = True
+        self.resource_builder = ResourceBuilder()
 
+    def _on_register(self):
+        
+        self.example_init()
+
+        self.run_forever(2, self.get_random_data)
+        
+        self.logger.debug('registered')
+        
+    def retrieve_request(self):
+        app = AE(appName = "appName")
+        onem2m_request = OneM2MRequest("update", to="onem2m/ipe_ae", pc=app)
+        promise = self.client.send_onem2m_request(onem2m_request)
+        content_request = self.discover()
+        for resource in content_request:
+            onem2m_request = OneM2MRequest("retrieve", to=resource)
+            promise = self.client.send_onem2m_request(onem2m_request)
+            onem2m_response = promise.get()
+            response = onem2m_response.content
+            res_builded = self.resource_retrieved_builder(response)
+            self.resourceDiscovered.append(res_builded)
+            ##da migliorare, resource retrieve builder non deve essere chiamato un'altra volta
+            self.uri_resource_dict[resource] = res_builded
+        # remove None values in list 
+        self.resourceDiscovered = [i for i in self.resourceDiscovered if i]
+        self.update_label_request()
+        
+    def resource_retrieved_builder(self, response):
+        #AE-Builder
+        if response.resourceType == ResourceTypeE.AE and response.AE_ID != "ipe-ae":
+            self.exposed_ids.append(response.resourceID)
+            return self.resource_builder.ae_builder(response)
+        #CSEBase-Builder
+        elif response.resourceType == ResourceTypeE.CSEBase:
+            self.exposed_ids.append(response.resourceID)
+            return self.resource_builder.cse_base_builder(response)
+        #Container-Builder
+        elif response.resourceType == ResourceTypeE.container:
+            cnt = self.resource_builder.container_builder(response)
+            self.exposed_ids.append(response.resourceID)
+            self.container_discovered.append(cnt)
+            return cnt
+        #ContentInstance-Builder
+        elif response.resourceType == ResourceTypeE.contentInstance:
+            self.exposed_ids.append(response.resourceID)
+            return self.resource_builder.content_instance_builder(response)
+
+
+    
+    def find_uri(self,resource):
+        return next((k for k, v in self.uri_resource_dict.items() if v is not None and  v.resourceID == resource.resourceID), None)
+    
+    def connect_to_local(self):
+        print("IpeAe Starting....")
+        runner = FlaskRunner(self)
+        runner.run("http://localhost:8000")
+        
+    def update_label_request(self):
+        labels_ = [{"Exposed-Resource-IDs": self.exposed_ids}]
+        app = AE(labels = labels_)
+        onem2m_request = OneM2MRequest("update", to="onem2m/ipe_ae", pc=app)
+        promise = self.client.send_onem2m_request(onem2m_request)
+
+    #override
+    @staticmethod
+    def _get_content_from_cin(cin):
+        return cin
+    
+    def handle_cin_creation(self,cnt, cin):
+        print('handle child creation under container: %s' % cnt)
+        print('cin: %s' % cin)
+        print('cin.resourceID: %s' % cin.resourceID)
+        print('cin.content: %s' % cin.content)
+        print('')
+        cin_builded = self.resource_builder.content_instance_builder(cin)
+        self.resourceDiscovered.append(cin_builded)
+        uri = ("%s/%s" %(cnt, cin.resourceName))
+        self.uri_resource_dict[uri] = cin_builded
+        self.exposed_ids.append(cin.resourceID)
+        self.update_label_request()  
+        self.notify_cin_creation(cin)
+    
+    def subscribe_to_ae(self):
+        self.add_subscription(
+            "onem2m/ipe_ae",
+            self.handle_subscribe_to)
+    
+    
+    
+    
+    def handle_subscribe_to(self, sub, net, rep):
+        print('handle_subscribe to...')
+        print('subscription path: %s' % sub)
+        print('notification event type: %s' % net)
+        print('representation: %s' % rep)
+        print('Calling refresh node')
+        #AttributeError at first startup
+        try:
+            self.interworking_manager.update_nodes()
+        except AttributeError:
+            pass
+            
+      #https://www.c-sharpcorner.com/article/observer-design-pattern-exaple-with-python-sample/  
+    
+    #Subject set
+    def add(self, interworking_manager):
+        self.interworking_manager = interworking_manager
+        
+    def remove(self, interworking_manager):
+        self.interworking_manager = None
+        
+    def notify_cin_creation(self,res):
+        print("-----AE_IPE notify InterworkingManager-----")
+        self.interworking_manager.update_cin(res)
+        
+    
+    #---------------EXAMPLE SETUP-------------------
     # sensors to create
     sensors = [
         'tmp'
@@ -30,125 +152,14 @@ class IpeAe(XAE):
     temp_offset = 10
     humi_range = 50
     humi_offset = 30
-
-    resourceDiscovered = []
-    uri_resource_dict = {}
-    client = OneM2MHTTPClient("http://0.0.0.0:8000",False)
     
     
-    
-        
-    def _on_register(self):
-        
-        self.example_init()
-
-        self.run_forever(10, self.get_random_data)
-        
-        self.logger.debug('registered')
-        
-    def retrieveRequest(self):
-        app = AE(appName = "appName")
-        onem2m_request = OneM2MRequest("update", to="onem2m/ipe_ae", pc=app)
-        promise = self.client.send_onem2m_request(onem2m_request)
-        content_request = self.discover()
-        for resource in content_request:
-            onem2m_request = OneM2MRequest("retrieve", to=resource)
-            promise = self.client.send_onem2m_request(onem2m_request)
-            onem2m_response = promise.get()
-            response = onem2m_response.content
-            
-            self.resourceDiscovered.append(self.resourceRetrievedBuilder(response))
-            self.uri_resource_dict[resource] = self.resourceRetrievedBuilder(response)
-        # remove None values in list 
-        self.resourceDiscovered = [i for i in self.resourceDiscovered if i]
-    
-    def resourceRetrievedBuilder(self, response):
-        #AE-Builder
-        if response.resourceType == ResourceTypeE.AE and response.AE_ID != "ipe-ae":
-            return self.aeBuilder(response)
-        #CSEBase-Builder
-        elif response.resourceType == ResourceTypeE.CSEBase:
-            return self.cseBaseBuilder(response)
-        #Container-Builder
-        elif response.resourceType == ResourceTypeE.container:
-            return self.containerBuilder(response)
-        #ContentInstance-Builder
-        elif response.resourceType == ResourceTypeE.contentInstance:
-            return self.contentInstanceBuilder(response)
-
-    def aeBuilder(self, response):
-        ae = AE(resourceName=response.resourceName,
-                requestReachability=True,
-                resourceType=response.resourceType,
-                resourceID=response.resourceID,
-                parentID=response.parentID,
-                lastModifiedTime=response.lastModifiedTime,
-                creationTime=response.creationTime, 
-                App_ID=response.App_ID,
-                AE_ID=response.AE_ID,
-                appName= "app"
-                )
-
-        return ae
-
-    def cseBaseBuilder(self, response):
-        cseBase = CSEBase(resourceName=response.resourceName,
-                          resourceType=response.resourceType,
-                          resourceID=response.resourceID,
-                          parentID=response.parentID,
-                          lastModifiedTime=response.lastModifiedTime,
-                          creationTime=response.creationTime,
-                          CSE_ID=response.CSE_ID,
-                         cseType=response.cseType)
-
-        return cseBase
-
-    def containerBuilder(self, response):
-        container = Container(resourceName=response.resourceName,
-                              resourceType=response.resourceType,
-                              resourceID=response.resourceID,
-                              parentID=response.parentID,
-                              lastModifiedTime=response.lastModifiedTime,
-                              creationTime=response.creationTime,
-                              currentNrOfInstances=response.currentNrOfInstances)
-        self.print_resource(response)
-
-        return container
-
-    def contentInstanceBuilder(self, response):
-        contentInstance = ContentInstance(resourceName=response.resourceName,
-                                          resourceType=response.resourceType,
-                                          resourceID=response.resourceID,
-                                          parentID=response.parentID,
-                                          lastModifiedTime=response.lastModifiedTime,
-                                          creationTime=response.creationTime,
-                                          content=response.content,
-                                          contentSize=response.contentSize)
-        return contentInstance
-
-    #def groupBuilder(self): not implemented in openmtc
-    
-    def print_resource(self,response):
-        print("ResourceName: "+response.resourceName)
-        print("ResourceID: "+response.resourceID)
-        print("ResourceType: "+str(response.resourceType))
-        print("ParentID:  "+response.parentID)
-        print("")
-        print("")
-        print("")
-    
-    def find_uri(self,resource):
-        return next((k for k, v in self.uri_resource_dict.items() if v is not None and  v.resourceID == resource.resourceID), None)
-    
-    def connect_to_local(self):
-        print("IpeAe Starting....")
-        runner = FlaskRunner(self)
-        runner.run("http://localhost:8000")
-
     def handle_command(self, container, value):
             print('handle_command...')
             print('container: %s' % container)
             print('value: %s' % value)
+            print('value: %s' % value.resourceID)
+            print('value: %s' % value.content)
             print('')
             
     def get_random_data(self):
@@ -176,7 +187,6 @@ class IpeAe(XAE):
             self.create_sensor_structure(sensor)
         self.push_sensor_data(sensor, value)
 
-    
     def example_init(self):
         self._recognized_sensors = {}
         self._recognized_measurement_containers = {}
@@ -211,8 +221,9 @@ class IpeAe(XAE):
             # subscribe to command container of each actuator to the handler command
             self.add_container_subscription(
                 commands_container.path,    # the Container or it's path to be subscribed
-                self.handle_command         # reference of the notification handling function
+                self.handle_cin_creation  # reference of the notification handling function
             )
+            self.subscribe_to_ae()
 
     def create_sensor_structure(self, sensor):
         print('initializing sensor: %s' % sensor)
@@ -261,7 +272,11 @@ class IpeAe(XAE):
 
         # finally, push the data set to measurements_container of the sensor
         self.push_content(self._recognized_measurement_containers[sensor], data)
-        
-        
-    
 
+    
+    
+    
+    
+    
+    
+    

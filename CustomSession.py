@@ -6,7 +6,7 @@ from opcua.common import utils
 from opcua.common.callback import CallbackType, ServerItemCallback, CallbackDispatcher
 from opcua.common.node import Node
 from opcua.server.address_space import AddressSpace, AttributeService, MethodService, NodeManagementService, ViewService
-from opcua.server.discovery_service import LocalDiscoveryService
+from opcua.server.discovery_service import LocalDiscoveryService  
 from opcua.server.history import HistoryManager
 from opcua.server.internal_server import InternalSession, InternalServer
 from opcua.server.standard_address_space import standard_address_space
@@ -59,13 +59,14 @@ class CustomInternalServer(InternalServer):
 
         # create a session to use on server side
         self.session_cls = session_cls or CustomInternalSession
+        self.interworking_manager = interworking_manager
+
         self.isession = self.session_cls(self, self.aspace, \
-          self.subscription_service, "Internal", user=UserManager.User.Admin)
+          self.subscription_service, "Internal",self.interworking_manager.data_cache_state, user=UserManager.User.Admin)
         
         self.current_time_node = Node(self.isession, ua.NodeId(ua.ObjectIds.Server_ServerStatus_CurrentTime))
         self._address_space_fixes()
         self.setup_nodes()
-        self.interworking_manager = interworking_manager
     @property
     def user_manager(self):
         return self._parent.user_manager
@@ -215,7 +216,7 @@ class CustomInternalServer(InternalServer):
         return self.endpoints[:]
 
     def create_session(self, name, user=UserManager.User.Anonymous, external=False):
-        return self.session_cls(self, self.aspace, self.subscription_service, name, user=user, external=external)
+        return self.session_cls(self, self.aspace, self.subscription_service, name, self.interworking_manager.data_cache_state, user=user, external=external)
 
     def enable_history_data_change(self, node, period=timedelta(days=7), count=0):
         """
@@ -280,14 +281,17 @@ class CustomInternalSession(InternalSession):
     _counter = 10
     _auth_counter = 1000
 
-    def __init__(self, internal_server, aspace, submgr, name, user=UserManager.User.Anonymous, external=False):
+    def __init__(self, internal_server, aspace, submgr, name,data_cache_state, user=UserManager.User.Anonymous, external=False ):
         self.logger = logging.getLogger(__name__)
         self.iserver = internal_server
         self.external = external  # define if session is external, we need to copy some objects if it is internal
         self.aspace = aspace
         self.subscription_service = submgr
         self.name = name
+        self.data_cache_state = data_cache_state
+
         self.user = user
+
         self.nonce = None
         self.state = SessionState.Created
         self.session_id = ua.NodeId(self._counter)
@@ -347,20 +351,42 @@ class CustomInternalSession(InternalSession):
         return result
 
     def read(self, params):
-        if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
-            self.get_data_request(params.NodesToRead[0].NodeId)
-        results = self.iserver.attribute_service.read(params)
-        return results
+        with self.aspace._lock:
+            if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
+                if self.data_cache_state:  #params.MaxAge == 0 or self.data_cache_state
+                    print("--- Reading from DataCache ---")
+                    results = self.iserver.attribute_service.read(params)
+                    return results
+                else:
+                    print("--- Direct Access Read ---")
+                    self.get_data_request(params.NodesToRead[0].NodeId)
+            results = self.iserver.attribute_service.read(params)
+            return results
 
     def history_read(self, params):
         return self.iserver.history_manager.read_history(params)
 
     def write(self, params):
-        if params.NodesToWrite[0].NodeId.NamespaceIndex == 2:
-            print("WRITE")
-            self.write_data_request(params.NodesToWrite[0].NodeId, 
-                                    params.NodesToWrite[0].Value.Value._value)
-        return self.iserver.attribute_service.write(params, self.user)
+        with self.aspace._lock:
+            #true va sostituito con una bool per definire che meccanismo stiamo usando "direct" o "cache"
+            if params.NodesToWrite[0].NodeId.NamespaceIndex == 2 :
+                if self.data_cache_state:
+                    uncertain_status = ua.StatusCode(ua.StatusCodes.Uncertain)
+                    print("--- DataCache Write ---")
+                    uncertain_response = self.iserver.attribute_service.write(params, self.user)
+                    uncertain_response[0] = uncertain_status
+                    #scrivere su onem2m e ricevere un feedback
+                    return uncertain_response
+
+                else:
+                    print("--- Direct Access Write ---")
+                    self.write_data_request(params.NodesToWrite[0].NodeId, 
+                                            params.NodesToWrite[0].Value.Value._value)
+                    return self.iserver.attribute_service.write(params, self.user)
+                
+                
+                
+            return self.iserver.attribute_service.write(params, self.user)
 
     def browse(self, params):
         return self.iserver.view_service.browse(params)
@@ -450,10 +476,14 @@ class CustomInternalSession(InternalSession):
         
         
     def read_periodically(self,node_to_read, frequency):
-        print(self.m_item_id_thread_dict)
         self.get_data_request(node_to_read)
         time.sleep(frequency/1000)
         print("thread  "+ str(frequency))
-        #t2 =threading.Timer(0.5, self.get_data_request, args=[node_to_read])
-        #t2.start()
-        #t2.join()
+        
+    def read_for_data_cache(self, node_ids):
+        with self.aspace._lock:
+            for mapped_nodeid in node_ids:
+                print("--- Update event ---")
+                self.get_data_request(mapped_nodeid)
+        
+
