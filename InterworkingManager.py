@@ -31,7 +31,6 @@ class InterworkingManager(Thread):
     def init_server(self):
         custom_iserver = CustomInternalServer(self)
         server = opcua.Server(iserver=custom_iserver)
-        #server.iserver.isession.read = MethodType(manager.read_builder(), server.iserver.isession)
         server.set_endpoint("opc.tcp://0.0.0.0:4840/freeopcua/server/")
         server.import_xml(os.path.dirname(__file__) + '/onem2m-opcua.xml')
         server.iserver.dump_address_space(os.path.dirname(__file__) + 'dump')
@@ -151,16 +150,14 @@ class InterworkingManager(Thread):
 
 
 ipe = IpeAe("ipe_ae", ['http://0.0.0.0:21346'])
-ipe_ae_thread = Thread(target= ipe.connect_to_local)
-ipe_ae_thread.start()
-#need to initialize ipe_ae, can be used thread-lock
+ipe.start_activity()
 time.sleep(1)
 ipe.retrieve_request()
-print("RESOURCE DISCOVERED FROM IPE-AE:")
-print(ipe.uri_resource_dict.keys())
+
+
 in_manager = InterworkingManager(ipe)
 ipe.add(in_manager)
-server = in_manager.init_server()
+in_manager.init_server()
 in_manager.map_discovered_resources_to_node()
 in_manager.server.start()
 

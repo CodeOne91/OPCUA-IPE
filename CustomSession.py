@@ -1,4 +1,3 @@
-from copy import copy
 from datetime import  timedelta
 from enum import Enum
 from opcua import ua
@@ -6,22 +5,14 @@ from opcua.common import utils
 from opcua.common.callback import CallbackType, ServerItemCallback, CallbackDispatcher
 from opcua.common.node import Node
 from opcua.server.address_space import AddressSpace, AttributeService, MethodService, NodeManagementService, ViewService
-from opcua.server.discovery_service import LocalDiscoveryService  
 from opcua.server.history import HistoryManager
 from opcua.server.internal_server import InternalSession, InternalServer
-from opcua.server.standard_address_space import standard_address_space
 from opcua.server.subscription_service import SubscriptionService
 from opcua.server.user_manager import UserManager
-import os
 import time
 from threading import Lock
 from StoppableThread import StoppableThread 
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
 import logging
-from datetime import datetime
 
 
 
@@ -67,214 +58,76 @@ class CustomInternalServer(InternalServer):
         self.current_time_node = Node(self.isession, ua.NodeId(ua.ObjectIds.Server_ServerStatus_CurrentTime))
         self._address_space_fixes()
         self.setup_nodes()
-    @property
+    
     def user_manager(self):
-        return self._parent.user_manager
+        return InternalServer.user_manager(self)
 
-    @property
     def thread_loop(self):
-        if self.loop is None:
-            raise Exception("InternalServer stopped: async threadloop is not running.")
-        return self.loop
+        return InternalServer.thread_loop(self)
 
-    @property
     def local_discovery_service(self):
-        if self._local_discovery_service is None:
-            self._local_discovery_service = LocalDiscoveryService(parent = self)
-            for edp in self.endpoints:
-                srvDesc = LocalDiscoveryService.ServerDescription(edp.Server)
-                self._local_discovery_service.add_server_description(srvDesc)
-        return self._local_discovery_service
+        return InternalServer.local_discovery_service(self)
 
     def setup_nodes(self):
-        """
-        Set up some nodes as defined by spec
-        """
-        uries = ["http://opcfoundation.org/UA/"]
-        ns_node = Node(self.isession, ua.NodeId(ua.ObjectIds.Server_NamespaceArray))
-        ns_node.set_value(uries)
+        InternalServer.setup_nodes(self)
 
     def load_standard_address_space(self, shelffile=None):
-        if (shelffile is not None) and (os.path.isfile(shelffile) or os.path.isfile(shelffile+".db")):
-            # import address space from shelf
-            self.aspace.load_aspace_shelf(shelffile)
-        else:
-            # import address space from code generated from xml
-            standard_address_space.fill_address_space(self.node_mgt_service)
-            # import address space directly from xml, this has performance impact so disabled
-            # importer = xmlimporter.XmlImporter(self.node_mgt_service)
-            # importer.import_xml("/path/to/python-opcua/schemas/Opc.Ua.NodeSet2.xml", self)
-
-            # if a cache file was supplied a shelve of the standard address space can now be built for next start up
-            if shelffile:
-                self.aspace.make_aspace_shelf(shelffile)
+        InternalServer.load_standard_address_space(self, shelffile=shelffile)
 
     def _address_space_fixes(self):
-        """
-        Looks like the xml definition of address space has some error. This is a good place to fix them
-        """
-
-        it = ua.AddReferencesItem()
-        it.SourceNodeId = ua.NodeId(ua.ObjectIds.BaseObjectType)
-        it.ReferenceTypeId = ua.NodeId(ua.ObjectIds.Organizes)
-        it.IsForward = False
-        it.TargetNodeId = ua.NodeId(ua.ObjectIds.ObjectTypesFolder)
-        it.TargetNodeClass = ua.NodeClass.Object
-
-        it2 = ua.AddReferencesItem()
-        it2.SourceNodeId = ua.NodeId(ua.ObjectIds.BaseDataType)
-        it2.ReferenceTypeId = ua.NodeId(ua.ObjectIds.Organizes)
-        it2.IsForward = False
-        it2.TargetNodeId = ua.NodeId(ua.ObjectIds.DataTypesFolder)
-        it2.TargetNodeClass = ua.NodeClass.Object
-
-        results = self.isession.add_references([it, it2])
-
-        params = ua.WriteParameters()
-        for nodeid in (ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerRead,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerHistoryReadData,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerHistoryReadEvents,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerWrite,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerHistoryUpdateData,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerHistoryUpdateEvents,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerMethodCall,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerBrowse,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerRegisterNodes,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerTranslateBrowsePathsToNodeIds,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxNodesPerNodeManagement,
-                     ua.ObjectIds.Server_ServerCapabilities_OperationLimits_MaxMonitoredItemsPerCall):
-            attr = ua.WriteValue()
-            attr.NodeId = ua.NodeId(nodeid)
-            attr.AttributeId = ua.AttributeIds.Value
-            attr.Value = ua.DataValue(ua.Variant(10000, ua.VariantType.UInt32), ua.StatusCode(ua.StatusCodes.Good))
-            attr.Value.ServerTimestamp = datetime.utcnow()
-            params.NodesToWrite.append(attr)
-        result = self.isession.write(params)
-        result[0].check()
+        InternalServer._address_space_fixes(self)
 
 
     def load_address_space(self, path):
-        """
-        Load address space from path
-        """
-        self.aspace.load(path)
+        InternalServer.load_address_space(self, path)
 
     def dump_address_space(self, path):
-        """
-        Dump current address space to path
-        """
-        self.aspace.dump(path)
+        InternalServer.dump_address_space(self, path)
 
     def start(self):
-        self.logger.info("starting internal server")
-        self.loop = utils.ThreadLoop()
-        self.loop.start()
-        self.subscription_service.set_loop(self.loop)
-        Node(self.isession, ua.NodeId(ua.ObjectIds.Server_ServerStatus_State)).set_value(0, ua.VariantType.Int32)
-        Node(self.isession, ua.NodeId(ua.ObjectIds.Server_ServerStatus_StartTime)).set_value(datetime.utcnow())
-        if not self.disabled_clock:
-            self._set_current_time()
+        InternalServer.start(self)
 
     def stop(self):
-        self.logger.info("stopping internal server")
-        self.isession.close_session()
-        self.subscription_service.set_loop(None)
-        self.history_manager.stop()
-        if self.loop:
-            self.loop.stop()
-            # wait for ThreadLoop to finish before proceeding
-            self.loop.join()
-            self.loop.close()
-            self.loop = None
+        InternalServer.stop(self)
 
     def is_running(self):
-        return self.loop is not None
+        return InternalServer.is_running(self)
 
     def _set_current_time(self):
-        self.current_time_node.set_value(datetime.utcnow())
-        self.loop.call_later(1, self._set_current_time)
-
+        InternalServer._set_current_time(self)
+    
     def get_new_channel_id(self):
-        self._channel_id_counter += 1
-        return self._channel_id_counter
+        return InternalServer.get_new_channel_id(self)
 
     def add_endpoint(self, endpoint):
-        self.endpoints.append(endpoint)
+        InternalServer.add_endpoint(self, endpoint)
 
     def get_endpoints(self, params=None, sockname=None):
-        self.logger.info("get endpoint")
-        if sockname:
-            # return to client the ip address it has access to
-            edps = []
-            for edp in self.endpoints:
-                edp1 = copy(edp)
-                url = urlparse(edp1.EndpointUrl)
-                url = url._replace(netloc=sockname[0] + ":" + str(sockname[1]))
-                edp1.EndpointUrl = url.geturl()
-                edps.append(edp1)
-            return edps
-        return self.endpoints[:]
+        return InternalServer.get_endpoints(self, params=params, sockname=sockname)
 
     def create_session(self, name, user=UserManager.User.Anonymous, external=False):
         return self.session_cls(self, self.aspace, self.subscription_service, name, self.interworking_manager.data_cache_state, user=user, external=external)
 
     def enable_history_data_change(self, node, period=timedelta(days=7), count=0):
-        """
-        Set attribute Historizing of node to True and start storing data for history
-        """
-        node.set_attribute(ua.AttributeIds.Historizing, ua.DataValue(True))
-        node.set_attr_bit(ua.AttributeIds.AccessLevel, ua.AccessLevel.HistoryRead)
-        node.set_attr_bit(ua.AttributeIds.UserAccessLevel, ua.AccessLevel.HistoryRead)
-        self.history_manager.historize_data_change(node, period, count)
+        InternalServer.enable_history_data_change(self, node, period=period, count=count)
 
     def disable_history_data_change(self, node):
-        """
-        Set attribute Historizing of node to False and stop storing data for history
-        """
-        node.set_attribute(ua.AttributeIds.Historizing, ua.DataValue(False))
-        node.unset_attr_bit(ua.AttributeIds.AccessLevel, ua.AccessLevel.HistoryRead)
-        node.unset_attr_bit(ua.AttributeIds.UserAccessLevel, ua.AccessLevel.HistoryRead)
-        self.history_manager.dehistorize(node)
+        InternalServer.disable_history_data_change(self, node)
 
     def enable_history_event(self, source, period=timedelta(days=7), count=0):
-        """
-        Set attribute History Read of object events to True and start storing data for history
-        """
-        event_notifier = source.get_event_notifier()
-        if ua.EventNotifier.SubscribeToEvents not in event_notifier:
-            raise ua.UaError("Node does not generate events", event_notifier)
-
-        if ua.EventNotifier.HistoryRead not in event_notifier:
-            event_notifier.add(ua.EventNotifier.HistoryRead)
-            source.set_event_notifier(event_notifier)
-
-        self.history_manager.historize_event(source, period, count)
+        InternalServer.enable_history_event(self, source, period=period, count=count)
 
     def disable_history_event(self, source):
-        """
-        Set attribute History Read of node to False and stop storing data for history
-        """
-        source.unset_attr_bit(ua.AttributeIds.EventNotifier, ua.EventNotifier.HistoryRead)
-        self.history_manager.dehistorize(source)
+        InternalServer.disable_history_event(self, source)
 
     def subscribe_server_callback(self, event, handle):
-        """
-        Create a subscription from event to handle
-        """
-        self.server_callback_dispatcher.addListener(event, handle)
+        InternalServer.subscribe_server_callback(self, event, handle)
 
     def unsubscribe_server_callback(self, event, handle):
-        """
-        Remove a subscription from event to handle
-        """
-        self.server_callback_dispatcher.removeListener(event, handle)
-
+        InternalServer.unsubscribe_server_callback(self, event, handle)
+    
     def set_attribute_value(self, nodeid, datavalue, attr=ua.AttributeIds.Value):
-        """
-        directly write datavalue to the Attribute, bypasing some checks and structure creation
-        so it is a little faster
-        """
-        self.aspace.set_attribute_value(nodeid, ua.AttributeIds.Value, datavalue)
+        InternalServer.set_attribute_value(self, nodeid, datavalue, attr=attr)
     
     
 class CustomInternalSession(InternalSession):
@@ -350,43 +203,10 @@ class CustomInternalSession(InternalSession):
         self.logger.info("Activated internal session %s for user %s", self.name, self.user)
         return result
 
-    def read(self, params):
-        with self.aspace._lock:
-            if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
-                if self.data_cache_state:  #params.MaxAge == 0 or self.data_cache_state
-                    print("--- Reading from DataCache ---")
-                    results = self.iserver.attribute_service.read(params)
-                    return results
-                else:
-                    print("--- Direct Access Read ---")
-                    self.get_data_request(params.NodesToRead[0].NodeId)
-            results = self.iserver.attribute_service.read(params)
-            return results
+    
 
     def history_read(self, params):
         return self.iserver.history_manager.read_history(params)
-
-    def write(self, params):
-        with self.aspace._lock:
-            #true va sostituito con una bool per definire che meccanismo stiamo usando "direct" o "cache"
-            if params.NodesToWrite[0].NodeId.NamespaceIndex == 2 :
-                if self.data_cache_state:
-                    uncertain_status = ua.StatusCode(ua.StatusCodes.Uncertain)
-                    print("--- DataCache Write ---")
-                    uncertain_response = self.iserver.attribute_service.write(params, self.user)
-                    uncertain_response[0] = uncertain_status
-                    #scrivere su onem2m e ricevere un feedback
-                    return uncertain_response
-
-                else:
-                    print("--- Direct Access Write ---")
-                    self.write_data_request(params.NodesToWrite[0].NodeId, 
-                                            params.NodesToWrite[0].Value.Value._value)
-                    return self.iserver.attribute_service.write(params, self.user)
-                
-                
-                
-            return self.iserver.attribute_service.write(params, self.user)
 
     def browse(self, params):
         return self.iserver.view_service.browse(params)
@@ -422,8 +242,6 @@ class CustomInternalSession(InternalSession):
         return self.subscription_service.modify_subscription(params, callback)
 
     def create_monitored_items(self, params):
-        
-      
         subscription_result = self.subscription_service.create_monitored_items(params)
         self.iserver.server_callback_dispatcher.dispatch(
             CallbackType.ItemSubscriptionCreated, ServerItemCallback(params, subscription_result))
@@ -466,10 +284,46 @@ class CustomInternalSession(InternalSession):
         if acks is None:
             acks = []
         return self.subscription_service.publish(acks)
+    
+    def read(self, params):
+        with self.aspace._lock:
+            if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
+                if self.data_cache_state:  #params.MaxAge == 0 or self.data_cache_state
+                    print("--- Reading from DataCache ---")
+                    results = self.iserver.attribute_service.read(params)
+                    return results
+                else:
+                    print("--- Direct Access Read ---")
+                    self.get_data_request(params.NodesToRead[0].NodeId)
+            results = self.iserver.attribute_service.read(params)
+            return results
+        
     #custom method
     def get_data_request(self, node_to_read):
         old_value = self.iserver.aspace.get_attribute_value(node_to_read, ua.AttributeIds.Value).Value.Value
         self.iserver.interworking_manager.translate_read_request(node_to_read, old_value)
+        
+    def write(self, params):
+        with self.aspace._lock:
+            #true va sostituito con una bool per definire che meccanismo stiamo usando "direct" o "cache"
+            if params.NodesToWrite[0].NodeId.NamespaceIndex == 2 :
+                if self.data_cache_state:
+                    uncertain_status = ua.StatusCode(ua.StatusCodes.Uncertain)
+                    print("--- DataCache Write ---")
+                    uncertain_response = self.iserver.attribute_service.write(params, self.user)
+                    uncertain_response[0] = uncertain_status
+                    #scrivere su onem2m e ricevere un feedback
+                    return uncertain_response
+
+                else:
+                    print("--- Direct Access Write ---")
+                    self.write_data_request(params.NodesToWrite[0].NodeId, 
+                                            params.NodesToWrite[0].Value.Value._value)
+                    return self.iserver.attribute_service.write(params, self.user)
+                
+                
+                
+            return self.iserver.attribute_service.write(params, self.user)
     #custom write method
     def write_data_request(self, node_to_write, val):
         self.iserver.interworking_manager.translate_write_request(node_to_write, val)
@@ -486,4 +340,3 @@ class CustomInternalSession(InternalSession):
                 print("--- Update event ---")
                 self.get_data_request(mapped_nodeid)
         
-

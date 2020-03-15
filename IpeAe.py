@@ -5,6 +5,8 @@ from openmtc_onem2m.client.http import OneM2MHTTPClient
 from openmtc_onem2m.model import AE,Container, ResourceTypeE 
 from random import random
 from ResourceBuilder import ResourceBuilder
+from threading import Thread
+
 
 class IpeAe(XAE):
     interworking_manager = []
@@ -20,12 +22,13 @@ class IpeAe(XAE):
         self.resource_builder = ResourceBuilder()
 
     def _on_register(self):
+        pass
+       # self.example_init()
+        #self.logger.debug('registered')
         
-        self.example_init()
-
-        self.run_forever(2, self.get_random_data)
-        
-        self.logger.debug('registered')
+    def start_activity(self):
+        ipe_ae_thread = Thread(target= self.connect_to_local)
+        ipe_ae_thread.start()
         
     def retrieve_request(self):
         app = AE(appName = "appName")
@@ -39,7 +42,6 @@ class IpeAe(XAE):
             response = onem2m_response.content
             res_builded = self.resource_retrieved_builder(response)
             self.resourceDiscovered.append(res_builded)
-            ##da migliorare, resource retrieve builder non deve essere chiamato un'altra volta
             self.uri_resource_dict[resource] = res_builded
         # remove None values in list 
         self.resourceDiscovered = [i for i in self.resourceDiscovered if i]
@@ -115,12 +117,8 @@ class IpeAe(XAE):
         print('representation: %s' % rep)
         print('Calling refresh node')
         #AttributeError at first startup
-        try:
-            self.interworking_manager.update_nodes()
-        except AttributeError:
-            pass
+        self.notify_event()
             
-      #https://www.c-sharpcorner.com/article/observer-design-pattern-exaple-with-python-sample/  
     
     #Subject set
     def add(self, interworking_manager):
@@ -133,6 +131,23 @@ class IpeAe(XAE):
         print("-----AE_IPE notify InterworkingManager-----")
         self.interworking_manager.update_cin(res)
         
+    def notify_event(self):
+        try:
+            self.interworking_manager.update_nodes()
+        except AttributeError:
+            pass
+        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     #---------------EXAMPLE SETUP-------------------
     # sensors to create
