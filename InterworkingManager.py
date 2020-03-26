@@ -38,6 +38,9 @@ class InterworkingManager(Thread):
         self.server = server
     
     def map_discovered_resources_to_node(self):
+        #need for startup
+        if self.data_cache_state== True:
+            self.server.iserver.isession.initialization_cache = True
         self.node_builder = NodeBuilder(self.xae.resourceDiscovered, self.server, self.xae)
         self.node_builder.node_builder()
         self.aeNodes = self.node_builder.aeNodes
@@ -46,7 +49,8 @@ class InterworkingManager(Thread):
         self.nodeid_uri_dict = self.node_builder.nodeid_uri_dict
         self.nodeid_attr_dict = self.node_builder.nodeid_attr_dict
         self.all_nodeid_mapped = self.node_builder.all_nodeid_builded
-        
+        self.server.iserver.isession.initialization_cache = False
+
     def translate_read_request(self,node_to_read, old_value):
             if self.nodeid_uri_dict.get(node_to_read, None) is not None:
                 onem2m_request = OneM2MRequest("retrieve", to=self.nodeid_uri_dict.get(node_to_read))
@@ -58,8 +62,11 @@ class InterworkingManager(Thread):
                 new_value =self.decode_response(attr_to_read, getattr(response,attr_to_read))
                 print(" HTTP-Read_Value: "+ str(new_value))
                 if old_value != new_value:
+                    #this type of write not support uncertain response
+                    self.server.iserver.isession.initialization_cache =True
                     self.server.get_node(node_to_read).set_value(new_value)
-                
+                    self.server.iserver.isession.initialization_cache =False
+
     def translate_write_request(self,node_to_write,value_to_write):
             if self.nodeid_uri_dict.get(node_to_write, None) is not None:
                 #take uri from nodeid
@@ -113,12 +120,12 @@ class InterworkingManager(Thread):
     
     #Observer set
     def update_cin(self,res):
-        print("--- Update Received ---")
+        print("--- Update Received from AE ---")
         self.node_builder.add_new_node(res)
         self.refresh_dict()
         
     def update_nodes(self):
-        print("--- Update resources value ---")
+        print("--- Update resources value from AE ---")
         self.refresh_dict()
         self.server.iserver.isession.read_for_data_cache(self.all_nodeid_mapped)
         
@@ -151,15 +158,17 @@ class InterworkingManager(Thread):
 
 ipe = IpeAe("ipe_ae", ['http://0.0.0.0:21346'])
 ipe.start_activity()
+
 time.sleep(1)
 ipe.retrieve_request()
 
 
-in_manager = InterworkingManager(ipe)
+in_manager = InterworkingManager(ipe,data_cache_state=True)
+print(in_manager.data_cache_state)
 ipe.add(in_manager)
 in_manager.init_server()
 in_manager.map_discovered_resources_to_node()
 in_manager.server.start()
 
 #generate event
-# curl -X POST localhost:8000/onem2m/ipe_ae/devices/a1/commands -H 'Content-Type: application/vnd.onem2m-res+json' -d '{"m2m:cin": {"con": "eyAic3dpdGNoX3N0YXRlIjogIm9uIiB9", "cnf":"application/json:1"}}'
+# curl -X POST localhost:8000/onem2m/ipe_ae/device/a1/commands -H 'Content-Type: application/vnd.onem2m-res+json' -d '{"m2m:cin": {"con": "eyAic3dpdGNoX3N0YXRlIjogIm9uIiB9", "cnf":"application/json:1"}}'

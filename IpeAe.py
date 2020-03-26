@@ -2,7 +2,7 @@ from openmtc_app.flask_runner import FlaskRunner
 from openmtc_app.onem2m import XAE
 from openmtc_onem2m import OneM2MRequest
 from openmtc_onem2m.client.http import OneM2MHTTPClient
-from openmtc_onem2m.model import AE,Container, ResourceTypeE 
+from openmtc_onem2m.model import AE,Container, ResourceTypeE
 from random import random
 from ResourceBuilder import ResourceBuilder
 from threading import Thread
@@ -15,6 +15,7 @@ class IpeAe(XAE):
     uri_resource_dict = {}
     exposed_ids = []
     client = OneM2MHTTPClient("http://0.0.0.0:8000",False)
+    sub_state = False
     
     def __init__(self, name_ae, poas):
         XAE.__init__(self,name=name_ae,poas=poas)
@@ -22,14 +23,45 @@ class IpeAe(XAE):
         self.resource_builder = ResourceBuilder()
 
     def _on_register(self):
-        pass
-       # self.example_init()
-        #self.logger.debug('registered')
+        while True:
+            
+            if self.sub_state:
+                self.subscribe_to_discovered_resource()
+                break
+            
+            
+        #devo fare in modo che l'handle avvenga dentro, infatti le notifiche funzionano solo con example_init
+        #passo ad esempio utilizzare le mappe, e attivare le sottoscrizioni tramite stato quando il retrieve è finito
+        
+        #self.example_init()
+        #self.retrieve_request()
+        self.logger.debug('registered')
         
     def start_activity(self):
         ipe_ae_thread = Thread(target= self.connect_to_local)
         ipe_ae_thread.start()
         
+    def start_subscription(self):
+        subscription_thread = Thread(target=self.subscribe_to_discovered_resource)
+        subscription_thread.start()
+        
+    def subscribe_to_discovered_resource(self):
+        print("SUBSCRIBE---------------------------------")
+
+        self.sub_state = False
+        print(self.resourceDiscovered)
+        for response in self.resourceDiscovered:
+            if response.resourceType == ResourceTypeE.AE or response.resourceType == ResourceTypeE.CSEBase:
+                self.subscribe_to(self.find_uri(response))
+                
+            elif response.resourceType == ResourceTypeE.container:
+               print("Entrato")
+               self.add_container_subscription(self.find_uri(response), self.handle_cin_creation)
+               
+            elif response.resourceType == ResourceTypeE.contentInstance:
+                pass
+
+            
     def retrieve_request(self):
         app = AE(appName = "appName")
         onem2m_request = OneM2MRequest("update", to="onem2m/ipe_ae", pc=app)
@@ -41,12 +73,15 @@ class IpeAe(XAE):
             onem2m_response = promise.get()
             response = onem2m_response.content
             res_builded = self.resource_retrieved_builder(response)
+            
+
             self.resourceDiscovered.append(res_builded)
             self.uri_resource_dict[resource] = res_builded
         # remove None values in list 
         self.resourceDiscovered = [i for i in self.resourceDiscovered if i]
         self.update_label_request()
-        
+        #self.start_subscription()
+        self.sub_state = True
     def resource_retrieved_builder(self, response):
         #AE-Builder
         if response.resourceType == ResourceTypeE.AE and response.AE_ID != "ipe-ae":
@@ -102,10 +137,11 @@ class IpeAe(XAE):
         self.update_label_request()  
         self.notify_cin_creation(cin)
     
-    def subscribe_to_ae(self):
+    def subscribe_to(self, subscribe_to):
         self.add_subscription(
-            "onem2m/ipe_ae",
+            subscribe_to,
             self.handle_subscribe_to)
+        
     
     
     
@@ -233,12 +269,12 @@ class IpeAe(XAE):
             )
             # add commands_container of current actuator to self._command_containers
             self._command_containers[actuator] = commands_container
-            # subscribe to command container of each actuator to the handler command
+            #self.subscribe to command container of each actuator to the handler command
             self.add_container_subscription(
                 commands_container.path,    # the Container or it's path to be subscribed
                 self.handle_cin_creation  # reference of the notification handling function
             )
-            self.subscribe_to_ae()
+           # self.subscribe_to()
 
     def create_sensor_structure(self, sensor):
         print('initializing sensor: %s' % sensor)

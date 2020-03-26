@@ -1,5 +1,6 @@
 from openmtc_onem2m.model import CSEBase, AE, Container, ContentInstance
 from opcua import ua
+#This class build all resource tree starting from a cseBase, single mapped resorce not yet implementend, e.g. aeNode without csebase, container without ae
 class NodeBuilder():
      
     def __init__(self, resourceDiscovered, server, xae):

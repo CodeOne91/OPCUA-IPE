@@ -141,8 +141,9 @@ class CustomInternalSession(InternalSession):
         self.aspace = aspace
         self.subscription_service = submgr
         self.name = name
+        #manage datacache
         self.data_cache_state = data_cache_state
-
+        self.initialization_cache = False
         self.user = user
 
         self.nonce = None
@@ -289,11 +290,11 @@ class CustomInternalSession(InternalSession):
         with self.aspace._lock:
             if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
                 if self.data_cache_state:  #params.MaxAge == 0 or self.data_cache_state
-                    print("--- Reading from DataCache ---")
+                    logging.debug("--- Reading from DataCache ---")
                     results = self.iserver.attribute_service.read(params)
                     return results
                 else:
-                    print("--- Direct Access Read ---")
+                    logging.debug("--- Direct Access Read ---")
                     self.get_data_request(params.NodesToRead[0].NodeId)
             results = self.iserver.attribute_service.read(params)
             return results
@@ -305,18 +306,25 @@ class CustomInternalSession(InternalSession):
         
     def write(self, params):
         with self.aspace._lock:
-            #true va sostituito con una bool per definire che meccanismo stiamo usando "direct" o "cache"
             if params.NodesToWrite[0].NodeId.NamespaceIndex == 2 :
                 if self.data_cache_state:
+                    logging.debug("--- DataCache Write ---")
+
+                    if self.initialization_cache:
+                        self.write_data_request(params.NodesToWrite[0].NodeId, 
+                                            params.NodesToWrite[0].Value.Value._value)
+                        return self.iserver.attribute_service.write(params, self.user)
+                    
                     uncertain_status = ua.StatusCode(ua.StatusCodes.Uncertain)
-                    print("--- DataCache Write ---")
                     uncertain_response = self.iserver.attribute_service.write(params, self.user)
                     uncertain_response[0] = uncertain_status
                     #scrivere su onem2m e ricevere un feedback
+                    self.write_data_request(params.NodesToWrite[0].NodeId, 
+                                            params.NodesToWrite[0].Value.Value._value)
                     return uncertain_response
 
                 else:
-                    print("--- Direct Access Write ---")
+                    logging.debug("--- Direct Access Write ---")
                     self.write_data_request(params.NodesToWrite[0].NodeId, 
                                             params.NodesToWrite[0].Value.Value._value)
                     return self.iserver.attribute_service.write(params, self.user)

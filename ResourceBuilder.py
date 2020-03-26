@@ -1,6 +1,5 @@
 from openmtc_onem2m.model import AE,  CSEBase, Container, ContentInstance 
 
-
 class ResourceBuilder():
     
 
@@ -16,6 +15,7 @@ class ResourceBuilder():
                 AE_ID=res.AE_ID,
                 appName= "app"
                 )
+        #self.print_resource(res)
 
         return ae
 
@@ -28,6 +28,7 @@ class ResourceBuilder():
                           creationTime=res.creationTime,
                           CSE_ID=res.CSE_ID,
                          cseType=res.cseType)
+        #self.print_resource(res)
 
         return cseBase
 
@@ -39,7 +40,7 @@ class ResourceBuilder():
                               lastModifiedTime=res.lastModifiedTime,
                               creationTime=res.creationTime,
                               currentNrOfInstances=res.currentNrOfInstances)
-        self.print_resource(res)
+        #self.print_resource(res)
 
         return container
 
@@ -52,6 +53,8 @@ class ResourceBuilder():
                                           creationTime=res.creationTime,
                                           content=res.content,
                                           contentSize=res.contentSize)
+        #self.print_resource(res)
+        
         return contentInstance
     
     def print_resource(self,res):
@@ -60,6 +63,5 @@ class ResourceBuilder():
             print("ResourceType: "+str(res.resourceType))
             print("ParentID:  "+res.parentID)
             print("")
-            print("")
-            print("")
+            
     #def groupBuilder(self): not implemented in openmtc
