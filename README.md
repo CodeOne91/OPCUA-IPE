@@ -1,4 +1,3 @@
-![N|Solid](https://lh3.googleusercontent.com/proxy/idt61wJwy4NdcFdzjeFSYs_aG4sVqNazK0fTB27eGTTUsXypbKZTaXSEnFu4q7i4oaQ7lE5ZV4ulI3A03OwgGK2DOX69hoTD5uZOxNI4gAgoDmDf_qyOLhZfQ44)
 # oneM2M-OPCUA-IPE
 oneM2M-OPCUA-IPE is a simple implementation based on Phyton language to allow an easier integration with libraries and SDK used to realize some elements of the OPCUA-IPE architecture as shown in [1] and [2]. oneM2M-OPCUA-IPE realise an automatic exposition and management of oneM2M CSE resource tree towards OPCUA Server Address Space.
 
