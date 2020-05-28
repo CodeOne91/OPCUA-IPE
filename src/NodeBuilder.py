@@ -1,6 +1,8 @@
 from openmtc_onem2m.model import CSEBase, AE, Container, ContentInstance
+
 from opcua import ua
-#This class build all resource tree starting from a cseBase, single mapped resorce not yet implementend, e.g. aeNode without csebase, container without ae
+
+#This class build all resource tree starting from a cseBase, single mapped resource not yet implementend, e.g. aeNode without csebase, container without ae
 class NodeBuilder():
      
     def __init__(self, resourceDiscovered, server, xae):
@@ -72,11 +74,11 @@ class NodeBuilder():
         listChildren = aeNode.get_children()
         for child in listChildren:
             self.populate_dict_name(child)                    
-            if child.get_browse_name().to_string() == "2:AE-ID":
+            if child.get_browse_name().to_string() == ("%d:AE-ID" % idx):
                 child.set_value(resource.AE_ID)
-            elif child.get_browse_name().to_string() == "2:App-ID":
+            elif child.get_browse_name().to_string() == ("%d:App-ID" % idx):
                 child.set_value(resource.App_ID)                            
-            elif child.get_browse_name().to_string() == "2:appName":
+            elif child.get_browse_name().to_string() == ("%d:appName" % idx):
                 child.set_value(resource.appName)                            
         self.resource_node_builder(aeNode, resource)
         self.populate_dict(aeNode, resource)
@@ -87,19 +89,19 @@ class NodeBuilder():
         containerObjectType = ua.NodeId.from_string('ns=%d;i=1005' % idx)
         listChildren = []
         for aeNode in aeNodesList:
-            if resource.parentID == aeNode.get_child("2:resourceID").get_value():
+            if resource.parentID == aeNode.get_child("%d:resourceID" % idx).get_value():
                 containerNodeAdded = aeNode.add_object(idx,resource.resourceName, containerObjectType)
                 listChildren = containerNodeAdded.get_children()
         for containerNode in containerNodesList:
-            if resource.parentID == containerNode.get_child("2:resourceID").get_value():
+            if resource.parentID == containerNode.get_child("%d:resourceID" % idx).get_value():
                 containerNodeAdded = containerNode.add_object(idx,resource.resourceName, containerObjectType)
                 listChildren = containerNodeAdded.get_children()
         
         for child in listChildren:
             self.populate_dict_name(child)
-            if child.get_browse_name().to_string() == "2:creationTime":
+            if child.get_browse_name().to_string() == ("%d:creationTime" % idx):
                 child.set_value(resource.creationTime)
-            elif child.get_browse_name().to_string() == "2:currentNrOfInstances":
+            elif child.get_browse_name().to_string() == ("%d:currentNrOfInstances" % idx):
                 child.set_value(resource.currentNrOfInstances)
         self.resource_node_builder(containerNodeAdded, resource)
         self.populate_dict(containerNodeAdded, resource)
@@ -110,14 +112,14 @@ class NodeBuilder():
         idx = self.server.get_namespace_index("http://dieei.unict.it/oneM2M-OPCUA/")
         contentInstanceObjectType = ua.NodeId.from_string('ns=%d;i=1004' % idx)
         for containerNode in containerNodesList:
-            if resource.parentID == containerNode.get_child("2:resourceID").get_value():
+            if resource.parentID == containerNode.get_child("%d:resourceID" % idx).get_value():
                 contentInstanceNode = containerNode.add_object(idx,resource.resourceName, contentInstanceObjectType)
                 listChildren = contentInstanceNode.get_children()
                 for child in listChildren:
                     self.populate_dict_name(child)                    
-                    if child.get_browse_name().to_string() == "2:content":
+                    if child.get_browse_name().to_string() == ("%d:content" % idx):
                         child.set_value(resource.content.decode("utf-8"))
-                    elif child.get_browse_name().to_string() == "2:contentSize":
+                    elif child.get_browse_name().to_string() == ("%d:contentSize" % idx):
                         child.set_value(resource.contentSize)
                 self.resource_node_builder(contentInstanceNode, resource)
                 self.populate_dict(contentInstanceNode, resource)

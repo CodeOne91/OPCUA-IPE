@@ -1,15 +1,21 @@
-from IpeAe import IpeAe
-import os.path
-import opcua
-from openmtc_onem2m.model import CSEBase, AE, Container, ContentInstance
-from CustomSession import CustomInternalServer
-from openmtc_onem2m.transport import OneM2MRequest
+import sys
+sys.path.insert(0, "..")
 import json
+from openmtc_onem2m.model import CSEBase, AE, Container, ContentInstance
+from openmtc_onem2m.transport import OneM2MRequest
+import os.path
 from threading import Thread
-import time
-from NodeBuilder import NodeBuilder
+
+import opcua
+
+from src.IpeAe import  IpeAe
+from src.NodeBuilder import NodeBuilder
+from src.CustomSession import CustomInternalServer
+
+
 
 class InterworkingManager(Thread):
+
     
     def __init__(self, xae, data_cache_state=None):
         self.xae = xae
@@ -32,8 +38,8 @@ class InterworkingManager(Thread):
         custom_iserver = CustomInternalServer(self)
         server = opcua.Server(iserver=custom_iserver)
         server.set_endpoint("opc.tcp://0.0.0.0:4840/freeopcua/server/")
-        server.import_xml(os.path.dirname(__file__) + '/onem2m-opcua.xml')
-        server.iserver.dump_address_space(os.path.dirname(__file__) + 'dump')
+        os.chdir("..")
+        server.import_xml(os.path.abspath(os.curdir)+ '/nodeset/onem2m-opcua.xml')       # server.iserver.dump_address_space(os.path.dirname(__file__) + 'dump')
 
         self.server = server
     
@@ -86,7 +92,7 @@ class InterworkingManager(Thread):
         
        
     def parse_json(self):
-        f = open('opc_openmtc_name_map.json')
+        f = open('utils/opc_openmtc_name_map.json')
         data = json.load(f)
         f.close()
         return data
@@ -137,38 +143,23 @@ class InterworkingManager(Thread):
             self.nodeid_attr_dict = self.node_builder.nodeid_attr_dict
             self.all_nodeid_mapped = self.node_builder.all_nodeid_builded
 
-                
-        
-        
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
-
-ipe = IpeAe("ipe_ae", ['http://0.0.0.0:21346'])
-ipe.start_activity()
-
-time.sleep(1)
-ipe.retrieve_request()
-
-
-in_manager = InterworkingManager(ipe,data_cache_state=True)
-print(in_manager.data_cache_state)
-ipe.add(in_manager)
-in_manager.init_server()
-in_manager.map_discovered_resources_to_node()
-in_manager.server.start()
+    
+    
+    
+if __name__ == "__main__":    
+   
+    ipe = IpeAe("ipe_ae", ['http://0.0.0.0:21346'])
+    ipe.start_activity()
+    ipe.retrieve_request()
+    
+    in_manager = InterworkingManager(ipe,data_cache_state=True)
+    print("DATA CACHE STATUS: %s ", in_manager.data_cache_state)
+    ipe.add(in_manager)
+    in_manager.init_server()
+    in_manager.map_discovered_resources_to_node()
+    in_manager.server.start()
 
 #generate event
-# curl -X POST localhost:8000/onem2m/ipe_ae/device/a1/commands -H 'Content-Type: application/vnd.onem2m-res+json' -d '{"m2m:cin": {"con": "eyAic3dpdGNoX3N0YXRlIjogIm9uIiB9", "cnf":"application/json:1"}}'
+# curl -X POST {PATH} -H {HEADER} -d {DATA.json}
+# curl -X POST localhost:8000/onem2m/light_ae1/light/ -H 'Content-Type: application/vnd.onem2m-res+json' -d '{"m2m:cin": {"con": "eyAic3dpdGNoX3N0YXRlIjogIm9uIiB9", "cnf":"application/json:1"}}'

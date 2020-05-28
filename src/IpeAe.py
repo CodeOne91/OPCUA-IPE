@@ -2,18 +2,25 @@ from openmtc_app.flask_runner import FlaskRunner
 from openmtc_app.onem2m import XAE
 from openmtc_onem2m import OneM2MRequest
 from openmtc_onem2m.client.http import OneM2MHTTPClient
-from openmtc_onem2m.model import AE,Container, ResourceTypeE
+from openmtc_onem2m.model import AE, Container, ResourceTypeE
 from random import random
-from ResourceBuilder import ResourceBuilder
 from threading import Thread
+
+from src.ResourceBuilder import ResourceBuilder
 
 
 class IpeAe(XAE):
+    #used to apply observer pattern
     interworking_manager = []
+    #list of discovered resources
     resourceDiscovered = []
+    #list of disceovered container
     container_discovered = []
+    #dictionary uri as a key and resource as a value
     uri_resource_dict = {}
+    #exposed resource ids
     exposed_ids = []
+    
     client = OneM2MHTTPClient("http://0.0.0.0:8000",False)
     sub_state = False
     
@@ -30,9 +37,7 @@ class IpeAe(XAE):
                 break
             
             
-        #devo fare in modo che l'handle avvenga dentro, infatti le notifiche funzionano solo con example_init
-        #passo ad esempio utilizzare le mappe, e attivare le sottoscrizioni tramite stato quando il retrieve è finito
-        
+        #Alternative of mn-init script, example at the bottom can be used 
         #self.example_init()
         #self.retrieve_request()
         self.logger.debug('registered')
@@ -55,12 +60,10 @@ class IpeAe(XAE):
                 self.subscribe_to(self.find_uri(response))
                 
             elif response.resourceType == ResourceTypeE.container:
-               print("Entrato")
-               self.add_container_subscription(self.find_uri(response), self.handle_cin_creation)
+                self.add_container_subscription(self.find_uri(response), self.handle_cin_creation)
                
             elif response.resourceType == ResourceTypeE.contentInstance:
                 pass
-
             
     def retrieve_request(self):
         app = AE(appName = "appName")
@@ -82,6 +85,7 @@ class IpeAe(XAE):
         self.update_label_request()
         #self.start_subscription()
         self.sub_state = True
+        
     def resource_retrieved_builder(self, response):
         #AE-Builder
         if response.resourceType == ResourceTypeE.AE and response.AE_ID != "ipe-ae":
@@ -101,8 +105,6 @@ class IpeAe(XAE):
         elif response.resourceType == ResourceTypeE.contentInstance:
             self.exposed_ids.append(response.resourceID)
             return self.resource_builder.content_instance_builder(response)
-
-
     
     def find_uri(self,resource):
         return next((k for k, v in self.uri_resource_dict.items() if v is not None and  v.resourceID == resource.resourceID), None)
@@ -141,10 +143,6 @@ class IpeAe(XAE):
         self.add_subscription(
             subscribe_to,
             self.handle_subscribe_to)
-        
-    
-    
-    
     
     def handle_subscribe_to(self, sub, net, rep):
         print('handle_subscribe to...')
@@ -154,13 +152,12 @@ class IpeAe(XAE):
         print('Calling refresh node')
         #AttributeError at first startup
         self.notify_event()
-            
-    
+   
     #Subject set
     def add(self, interworking_manager):
         self.interworking_manager = interworking_manager
         
-    def remove(self, interworking_manager):
+    def remove(self):
         self.interworking_manager = None
         
     def notify_cin_creation(self,res):

@@ -1,4 +1,5 @@
 {
+   "_comment": "this file used to resolve name difference between opcua and openmtc names",
    "resourceName": "resourceName",
    "resourceType": "resourceType",
    "resourceID": "resourceID",

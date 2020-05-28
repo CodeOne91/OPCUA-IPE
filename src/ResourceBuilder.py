@@ -1,4 +1,5 @@
-from openmtc_onem2m.model import AE,  CSEBase, Container, ContentInstance 
+from openmtc_onem2m.model import AE, CSEBase, Container, ContentInstance 
+
 
 class ResourceBuilder():
     

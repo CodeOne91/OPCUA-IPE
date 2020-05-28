@@ -1,10 +1,11 @@
 from threading import Thread, Event 
-  
+
+
+
 class StoppableThread(Thread): 
 
     # Thread class with a _stop() method.  
-    # The thread itself has to check 
-    # regularly for the stopped() condition. 
+    #Stoppable thread class used to monitored value when data-cache not used
   
     def __init__(self, group=None, target=None, name=None, 
         args=(), kwargs=None, *, daemon=None):

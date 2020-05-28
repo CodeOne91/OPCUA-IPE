@@ -1,19 +1,20 @@
 from datetime import  timedelta
 from enum import Enum
+import logging
+from opcua.common.callback import CallbackType, ServerItemCallback, CallbackDispatcher
+from threading import Lock
+import time
+
 from opcua import ua
 from opcua.common import utils
-from opcua.common.callback import CallbackType, ServerItemCallback, CallbackDispatcher
 from opcua.common.node import Node
 from opcua.server.address_space import AddressSpace, AttributeService, MethodService, NodeManagementService, ViewService
 from opcua.server.history import HistoryManager
 from opcua.server.internal_server import InternalSession, InternalServer
 from opcua.server.subscription_service import SubscriptionService
 from opcua.server.user_manager import UserManager
-import time
-from threading import Lock
-from StoppableThread import StoppableThread 
-import logging
 
+from src.StoppableThread import StoppableThread 
 
 
 class SessionState(Enum):
@@ -129,7 +130,8 @@ class CustomInternalServer(InternalServer):
     def set_attribute_value(self, nodeid, datavalue, attr=ua.AttributeIds.Value):
         InternalServer.set_attribute_value(self, nodeid, datavalue, attr=attr)
     
-    
+#Custom class of InternalSession used to enable OPC UA Server to interworking features: 
+#__ini__, create_monitored_items(), delete_monitored_items(), read(), write(), get_data_request(),write_data_request(),read_for_data_cache(), read_periodically()   
 class CustomInternalSession(InternalSession):
     _counter = 10
     _auth_counter = 1000
@@ -137,7 +139,7 @@ class CustomInternalSession(InternalSession):
     def __init__(self, internal_server, aspace, submgr, name,data_cache_state, user=UserManager.User.Anonymous, external=False ):
         self.logger = logging.getLogger(__name__)
         self.iserver = internal_server
-        self.external = external  # define if session is external, we need to copy some objects if it is internal
+        self.external = external  
         self.aspace = aspace
         self.subscription_service = submgr
         self.name = name
@@ -250,8 +252,6 @@ class CustomInternalSession(InternalSession):
             node_to_read = params.ItemsToCreate[0].ItemToMonitor.NodeId
             frequency = subscription_result[0].RevisedSamplingInterval
             monitored_ited_id = subscription_result[0].MonitoredItemId
-
-            #monitor_thread = threading.Thread(target=self.read_periodically,args=[node_to_read, frequency])
             monitor_thread = StoppableThread(target=self.read_periodically,args=[node_to_read, frequency])
             self.m_item_id_thread_dict[monitored_ited_id] = monitor_thread
             monitor_thread.start()
@@ -289,7 +289,7 @@ class CustomInternalSession(InternalSession):
     def read(self, params):
         with self.aspace._lock:
             if params.NodesToRead[0].NodeId.NamespaceIndex == 2:
-                if self.data_cache_state:  #params.MaxAge == 0 or self.data_cache_state
+                if self.data_cache_state:  #or params.MaxAge == 0 or self.data_cache_state
                     logging.debug("--- Reading from DataCache ---")
                     results = self.iserver.attribute_service.read(params)
                     return results
@@ -299,7 +299,7 @@ class CustomInternalSession(InternalSession):
             results = self.iserver.attribute_service.read(params)
             return results
         
-    #custom method
+    #custom read method
     def get_data_request(self, node_to_read):
         old_value = self.iserver.aspace.get_attribute_value(node_to_read, ua.AttributeIds.Value).Value.Value
         self.iserver.interworking_manager.translate_read_request(node_to_read, old_value)
@@ -318,7 +318,7 @@ class CustomInternalSession(InternalSession):
                     uncertain_status = ua.StatusCode(ua.StatusCodes.Uncertain)
                     uncertain_response = self.iserver.attribute_service.write(params, self.user)
                     uncertain_response[0] = uncertain_status
-                    #scrivere su onem2m e ricevere un feedback
+                    #need to implement ack from onem2m side
                     self.write_data_request(params.NodesToWrite[0].NodeId, 
                                             params.NodesToWrite[0].Value.Value._value)
                     return uncertain_response
@@ -332,6 +332,7 @@ class CustomInternalSession(InternalSession):
                 
                 
             return self.iserver.attribute_service.write(params, self.user)
+   
     #custom write method
     def write_data_request(self, node_to_write, val):
         self.iserver.interworking_manager.translate_write_request(node_to_write, val)
